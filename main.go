@@ -21,7 +21,7 @@ func main() {
 		createDbFile()
 		dbhandler.CreateSchema(filePath)
 	}
-	// if it already exist, ensure to close then we move to "game" loop
+	// if it already exist, ensure to close.
 	defer file.Close()
 	// Start the task
 	taskhandler.TodoListRunner(filePath)
