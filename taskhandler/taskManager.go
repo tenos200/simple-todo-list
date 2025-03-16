@@ -1,37 +1,41 @@
 package taskhandler
 
 import (
-	"bufio"
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"os"
 	"strings"
 	"time"
 	"todoList/dbhandler"
 )
 
-// TodoListRunner the entry point for the todo list, handles the event loop
-// for the todo list. Takes a file path to the required database file.
+// TodoListRunner the takes a file path to required database file,
+// handles the event loop. Provides the user with 5 choices for input:
+//
+// Picks:
+//  1. Add a task
+//  2. Show all tasks
+//  3. Show all tasks
+//  4. Mark a task as done
+//  5. Exit program
 func TodoListRunner(filePath string) {
 
-	scanner := bufio.NewScanner(os.Stdin)
 	// Fetch relevant entries from db, and show menu
 	dbOutputCache := dbhandler.GetDbRows(filePath)
 	for {
-		showMenu()
-		scanner.Scan()
-		text := scanner.Text()
+		choice := showMenu()
 
 		// Switch statement for initialising different menu options.
-		switch text {
-		case "1":
-			addTaskToList(&dbOutputCache)
-		case "2":
+		switch choice {
+		case 1:
 			showTasks(&dbOutputCache)
-		case "3":
-			markAsDone()
-		case "4":
+		case 2:
+			addTaskToList(&dbOutputCache)
+		case 3:
+			markAsDone(&dbOutputCache)
+		case 4:
 			deleteTask()
-		case "5":
+		case 5:
 			os.Exit(0)
 		default:
 			fmt.Println("Error: Invalid input")
@@ -40,83 +44,80 @@ func TodoListRunner(filePath string) {
 	}
 }
 
-// addTaskToList prompts the user to enter a new task and appends it to dbOutputCache.
-// It continuously asks for task details until the user confirms the addition.
-// The function takes a reference to a slice of dbhandler.DbRow and modifies it directly.
-//
-// Steps:
-//
-//  1. Prompts the user for a task name.
-//
-//  2. Asks the user to select a task date (Tomorrow, Next Week, or custom).
-//
-//  3. Sets the task status to "Incomplete" by default.
-//
-//  4. Displays the task details and asks for confirmation to add the task.
-//
-//  5. If confirmed, the task is appended to dbOutputCache with an ID of -1
-//
-// (indicating a new, unsaved task in database).
-//
-//  6. Returns the updated reference to dbOutputCache.
 func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 	var rowToAdd dbhandler.DbRow
-	// For loop for adding task
+
+	// For loop for adding task to list
 	for {
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Println("Add task name:")
-		scanner.Scan()
-		taskName := scanner.Text()
-		rowToAdd.Name = taskName
-		fmt.Println(
-			"Add task date:\n1.Tomorrow\n2.Next Week\n3.Enter own date.")
-		scanner.Scan()
-		dateInput := scanner.Text()
-		rowToAdd.Date = getInputDate(dateInput)
-		// set default status to imcomplete
+		var confirmation int
+
+		// Add name to task.
+		huh.NewInput().
+			Title("Enter task name.").
+			Prompt("> ").
+			Value(&rowToAdd.Name).
+			Run()
+
+		// Get the date for the task
+		rowToAdd.Date = getInputDate()
+
+		// Set default status to imcomplete
 		rowToAdd.Status = "Incomplete"
-		fmt.Printf("Task: %s\nDate :%s\n", rowToAdd.Name, rowToAdd.Date)
-		fmt.Printf("Would you like to add this task to list.\n[y/n]\n")
-		scanner.Scan()
-		userInput := scanner.Text()
-		if userInput == "y" {
-			rowToAdd.Id = -1
+		formattedDate := fmt.Sprintf("Task: %s\nDate: %s\n[Y/N]",
+			rowToAdd.Name,
+			rowToAdd.Date)
+
+		huh.NewSelect[int]().
+			Title(formattedDate).
+			Options(
+				huh.NewOption("Y", 1),
+				huh.NewOption("N", 2),
+			).
+			Value(&confirmation).
+			Run()
+
+		if confirmation == 1 {
 			*dbOutputCache = append(*dbOutputCache, rowToAdd)
-			fmt.Println("Task added!")
 			break
 		}
+
 	}
 	return dbOutputCache
 }
 
-// getInputDate takes a userInput from 1 -> returns tomorrows date, 2 -> returns
-// next weeks date. 3 -> allows you to input a date.
-//
-// Example:
-//
-//	date := getInputDate("1")
-//	fmt.Println(date)
-//
-// Output:
-//
-//	"2006-01-02"
-func getInputDate(userDateChoice string) string {
+func getInputDate() string {
+
 	var pickedDate string
+	var switchSelect int
 	currentDate := time.Now()
-	switch userDateChoice {
-	case "1":
+	huh.NewSelect[int]().
+		Title("Input a date for task completion.").
+		Options(
+			huh.NewOption("Tomorrow.", 1),
+			huh.NewOption("In 7 days.", 2),
+			huh.NewOption("Enter own date.", 3),
+		).
+		Value(&switchSelect).
+		Run()
+
+		// Switch statement to pick the correct date
+	switch switchSelect {
+	case 1:
 		tomorrow := currentDate.Add(24 * time.Hour)
 		pickedDate = tomorrow.Format("2006-01-02")
-	case "2":
+	case 2:
 		nextWeek := currentDate.Add(time.Hour * 24 * 7)
 		pickedDate = nextWeek.Format("2006-01-02")
-	case "3":
+	case 3:
 		// Initialise a new scanner and take the date.
-		fmt.Printf("Enter date formatted as '2006-01-02': ")
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Scan()
-		dateOutput := scanner.Text()
-		parsedDate, dateErr := time.Parse("2006-01-02", dateOutput)
+		var dateInput string
+		huh.NewInput().
+			Title("Enter date formatted as '2006-01-02'").
+			Prompt("> ").
+			Value(&dateInput).
+			Run()
+
+		parsedDate, dateErr := time.Parse("2006-01-02", dateInput)
 		if dateErr != nil {
 			fmt.Println("Incorrectly formatted date", "date", dateErr)
 		}
@@ -125,7 +126,7 @@ func getInputDate(userDateChoice string) string {
 	return pickedDate
 }
 
-// TODO: fix so that the output is correct.
+// showTasks displays all tasks for tasklist.
 func showTasks(tasks *[]dbhandler.DbRow) {
 
 	if len(*tasks) == 0 {
@@ -136,32 +137,34 @@ func showTasks(tasks *[]dbhandler.DbRow) {
 		fmt.Println(strings.Repeat("=", 50))
 
 		for _, task := range *tasks {
-			fmt.Printf("| %-25s | %-10s | %-10s |\n", task.Name, task.Status, task.Date)
+			fmt.Printf("| %-25s | %-10s | %-10s |\n",
+				task.Name, task.Status, task.Date)
 		}
 
 		fmt.Println(strings.Repeat("=", 50))
 	}
 }
 
-func markAsDone() {
-	fmt.Println("mark task as done")
+func markAsDone(tasks *[]dbhandler.DbRow) {
 }
 
 func deleteTask() {
 	fmt.Println("delete tasks")
 }
 
-// showMenu shows the output menu options for the todo list.
-func showMenu() {
-	menu := `====================================
-          📌 TO-DO LIST 📌         
-====================================
-[1] ➜ Add a new task
-[2] ➜ View tasks
-[3] ➜ Mark task as done ✅
-[4] ➜ Delete a task ❌
-[5] ➜ Exit 🚪
-------------------------------------
-Enter your choice: `
-	fmt.Println(menu)
+func showMenu() int {
+	var userInput int
+	huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[int]().
+				Options(
+					huh.NewOption("View Tasks", 1),
+					huh.NewOption("Add New Task", 2),
+					huh.NewOption("Mark Complete", 3),
+					huh.NewOption("Delete Task", 4),
+					huh.NewOption("Exit", 5),
+				).Value(&userInput),
+		),
+	).Run()
+	return userInput
 }
