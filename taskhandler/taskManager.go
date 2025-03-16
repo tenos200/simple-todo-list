@@ -16,11 +16,10 @@ const timeFormat = "2006-01-02"
 // handles the event loop. Provides the user with 5 choices for input:
 //
 // Picks:
-//  1. Add a task
-//  2. Show all tasks
-//  3. Show all tasks
-//  4. Mark a task as done
-//  5. Exit program
+//  1. Show all tasks
+//  2. Add Task
+//  3. Mark Task Done
+//  4. Exit program
 func TodoListRunner(filePath string) {
 
 	// Fetch relevant entries from db, and show menu
@@ -37,11 +36,7 @@ func TodoListRunner(filePath string) {
 		case 3:
 			markAsDone(&dbOutputCache)
 		case 4:
-			deleteTask()
-		case 5:
 			os.Exit(0)
-		default:
-			fmt.Println("Error: Invalid input")
 		}
 	}
 }
@@ -89,7 +84,7 @@ func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 // formatted as 2006-01-02.
 func getInputDate() string {
 
-	// Instansiate variables for huh input values
+	// Instantiate variables for huh.NewOptions input values
 	var pickedDate string
 	var switchSelect int
 	currentDate := time.Now()
@@ -134,7 +129,7 @@ func getInputDate() string {
 func showTasks(tasks *[]dbhandler.DbRow) {
 
 	if len(*tasks) == 0 {
-		fmt.Println("No tasks have been added.")
+		fmt.Println("There are no tasks on the list.")
 	} else {
 		for _, v := range *tasks {
 			fmt.Printf("ID: %d\nName: %s\nStatus: %s\nDate: %s\n",
@@ -148,23 +143,23 @@ func markAsDone(tasks *[]dbhandler.DbRow) {
 	var selectedTasks []string
 	var choices []huh.Option[string]
 
-	// convert the tasks into huhNewOptions
+	// Convert the tasks into huhNewOptions
 	for _, v := range *tasks {
 		convertedId := strconv.Itoa(v.Id)
 		choices = append(choices, huh.NewOption(v.Name, convertedId))
 	}
-	huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Options").
-				Options(choices...).
-				Value(&selectedTasks),
-		),
-	).Run()
-}
-
-func deleteTask() {
-	fmt.Println("delete tasks")
+	if len(*tasks) == 0 {
+		fmt.Println("There are no tasks on the list.")
+	} else {
+		huh.NewForm(
+			huh.NewGroup(
+				huh.NewMultiSelect[string]().
+					Title("Task").
+					Options(choices...).
+					Value(&selectedTasks),
+			),
+		).Run()
+	}
 }
 
 // showMenu displays a menu with options from 1-5, returns int from user input.
@@ -173,8 +168,7 @@ func deleteTask() {
 //  1. View Tasks
 //  2. Add a new Task
 //  3. Mark Complete
-//  4. Delete Task
-//  5. Exit
+//  4. Exit
 func showMenu() int {
 	var userInput int
 	huh.NewForm(
@@ -184,8 +178,7 @@ func showMenu() int {
 					huh.NewOption("View Tasks", 1),
 					huh.NewOption("Add New Task", 2),
 					huh.NewOption("Mark Complete", 3),
-					huh.NewOption("Delete Task", 4),
-					huh.NewOption("Exit", 5),
+					huh.NewOption("Exit", 4),
 				).
 				Value(&userInput),
 		),
