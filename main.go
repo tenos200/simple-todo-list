@@ -2,12 +2,11 @@ package main
 
 import (
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"todoList/dbhandler"
 	"todoList/taskhandler"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 const filePath = "./test.db"
@@ -21,7 +20,7 @@ func main() {
 		createDbFile()
 		dbhandler.CreateSchema(filePath)
 	}
-	// if it already exist, ensure to close.
+	// If it already exist, ensure to close.
 	defer file.Close()
 	// Start the task
 	taskhandler.TodoListRunner(filePath)

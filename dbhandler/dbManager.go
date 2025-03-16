@@ -27,6 +27,8 @@ func DeleteFromDb() {
 	fmt.Println("Deleted from database.")
 }
 
+// CreateSchema takes a file path for the database and creates the required
+// table on that database.
 func CreateSchema(filePath string) {
 	db, openDbErr := sql.Open("sqlite3", filePath)
 	if openDbErr != nil {

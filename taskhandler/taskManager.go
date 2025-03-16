@@ -2,12 +2,15 @@ package taskhandler
 
 import (
 	"fmt"
-	"github.com/charmbracelet/huh"
 	"os"
-	"strings"
+	"strconv"
 	"time"
 	"todoList/dbhandler"
+
+	"github.com/charmbracelet/huh"
 )
+
+const timeFormat = "2006-01-02"
 
 // TodoListRunner the takes a file path to required database file,
 // handles the event loop. Provides the user with 5 choices for input:
@@ -40,7 +43,6 @@ func TodoListRunner(filePath string) {
 		default:
 			fmt.Println("Error: Invalid input")
 		}
-
 	}
 }
 
@@ -49,7 +51,7 @@ func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 
 	// For loop for adding task to list
 	for {
-		var confirmation int
+		var confirmation bool
 
 		// Add name to task.
 		huh.NewInput().
@@ -63,20 +65,18 @@ func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 
 		// Set default status to imcomplete
 		rowToAdd.Status = "Incomplete"
-		formattedDate := fmt.Sprintf("Task: %s\nDate: %s\n[Y/N]",
+		formattedDate := fmt.Sprintf("Task: %s\nDate: %s\n",
 			rowToAdd.Name,
 			rowToAdd.Date)
 
-		huh.NewSelect[int]().
+		huh.NewConfirm().
 			Title(formattedDate).
-			Options(
-				huh.NewOption("Y", 1),
-				huh.NewOption("N", 2),
-			).
+			Affirmative("Yes.").
+			Negative("No.").
 			Value(&confirmation).
 			Run()
 
-		if confirmation == 1 {
+		if confirmation {
 			*dbOutputCache = append(*dbOutputCache, rowToAdd)
 			break
 		}
@@ -85,8 +85,11 @@ func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 	return dbOutputCache
 }
 
+// getInputDate allows user to pick an input date from menu, returns a date string
+// formatted as 2006-01-02.
 func getInputDate() string {
 
+	// Instansiate variables for huh input values
 	var pickedDate string
 	var switchSelect int
 	currentDate := time.Now()
@@ -100,15 +103,16 @@ func getInputDate() string {
 		Value(&switchSelect).
 		Run()
 
-		// Switch statement to pick the correct date
+	// Switch statement to pick the correct date
 	switch switchSelect {
 	case 1:
 		tomorrow := currentDate.Add(24 * time.Hour)
-		pickedDate = tomorrow.Format("2006-01-02")
+		pickedDate = tomorrow.Format(timeFormat)
 	case 2:
 		nextWeek := currentDate.Add(time.Hour * 24 * 7)
-		pickedDate = nextWeek.Format("2006-01-02")
+		pickedDate = nextWeek.Format(timeFormat)
 	case 3:
+
 		// Initialise a new scanner and take the date.
 		var dateInput string
 		huh.NewInput().
@@ -117,11 +121,11 @@ func getInputDate() string {
 			Value(&dateInput).
 			Run()
 
-		parsedDate, dateErr := time.Parse("2006-01-02", dateInput)
+		parsedDate, dateErr := time.Parse(timeFormat, dateInput)
 		if dateErr != nil {
 			fmt.Println("Incorrectly formatted date", "date", dateErr)
 		}
-		pickedDate = parsedDate.Format("2006-01-02")
+		pickedDate = parsedDate.Format(timeFormat)
 	}
 	return pickedDate
 }
@@ -132,26 +136,45 @@ func showTasks(tasks *[]dbhandler.DbRow) {
 	if len(*tasks) == 0 {
 		fmt.Println("No tasks have been added.")
 	} else {
-		fmt.Println(strings.Repeat("=", 50))
-		fmt.Printf("| %-25s | %-10s | %-10s |\n", "Task Name", "Status", "Date")
-		fmt.Println(strings.Repeat("=", 50))
-
-		for _, task := range *tasks {
-			fmt.Printf("| %-25s | %-10s | %-10s |\n",
-				task.Name, task.Status, task.Date)
+		for _, v := range *tasks {
+			fmt.Printf("ID: %d\nName: %s\nStatus: %s\nDate: %s\n",
+				v.Id, v.Name, v.Status, v.Date)
 		}
-
-		fmt.Println(strings.Repeat("=", 50))
 	}
 }
 
+// TODO: Implement this function
 func markAsDone(tasks *[]dbhandler.DbRow) {
+	var selectedTasks []string
+	var choices []huh.Option[string]
+
+	// convert the tasks into huhNewOptions
+	for _, v := range *tasks {
+		convertedId := strconv.Itoa(v.Id)
+		choices = append(choices, huh.NewOption(v.Name, convertedId))
+	}
+	huh.NewForm(
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("Options").
+				Options(choices...).
+				Value(&selectedTasks),
+		),
+	).Run()
 }
 
 func deleteTask() {
 	fmt.Println("delete tasks")
 }
 
+// showMenu displays a menu with options from 1-5, returns int from user input.
+//
+// Choices:
+//  1. View Tasks
+//  2. Add a new Task
+//  3. Mark Complete
+//  4. Delete Task
+//  5. Exit
 func showMenu() int {
 	var userInput int
 	huh.NewForm(
@@ -163,8 +186,9 @@ func showMenu() int {
 					huh.NewOption("Mark Complete", 3),
 					huh.NewOption("Delete Task", 4),
 					huh.NewOption("Exit", 5),
-				).Value(&userInput),
+				).
+				Value(&userInput),
 		),
-	).Run()
+	).WithHeight(10).Run()
 	return userInput
 }
