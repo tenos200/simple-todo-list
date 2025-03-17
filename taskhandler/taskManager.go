@@ -34,6 +34,7 @@ func TodoListRunner(filePath string) {
 		case 3:
 			// TODO: something is not right with return here.
 			dbOutputCache = markAsDone(dbOutputCache)
+			fmt.Println(dbOutputCache)
 		case 4:
 			// Insert and update all necessary
 			dbhandler.UpdateDatabase(filePath, &dbOutputCache)

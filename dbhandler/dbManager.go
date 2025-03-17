@@ -39,7 +39,7 @@ func UpdateDatabase(filePath string, tasks *[]DbRow) {
 		} else {
 			// If an entry has been moved to complete we need to change this.
 			_, updateErr := db.Exec(`UPDATE todolist SET task_status = ?
-            WHERE number_id = ?;`, v.Name, v.Status, v.Date, v.Id)
+            WHERE number_id = ?;`, v.Status, v.Id)
 			if updateErr != nil {
 				fmt.Println(updateErr)
 			}
