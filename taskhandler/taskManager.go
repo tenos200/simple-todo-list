@@ -2,12 +2,10 @@ package taskhandler
 
 import (
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"os"
-	"strconv"
 	"time"
 	"todoList/dbhandler"
-
-	"github.com/charmbracelet/huh"
 )
 
 const timeFormat = "2006-01-02"
@@ -34,8 +32,11 @@ func TodoListRunner(filePath string) {
 		case 2:
 			addTaskToList(&dbOutputCache)
 		case 3:
-			markAsDone(&dbOutputCache)
+			// TODO: something is not right with return here.
+			dbOutputCache = markAsDone(dbOutputCache)
 		case 4:
+			// Insert and update all necessary
+			dbhandler.UpdateDatabase(filePath, &dbOutputCache)
 			os.Exit(0)
 		}
 	}
@@ -132,34 +133,44 @@ func showTasks(tasks *[]dbhandler.DbRow) {
 		fmt.Println("There are no tasks on the list.")
 	} else {
 		for _, v := range *tasks {
-			fmt.Printf("ID: %d\nName: %s\nStatus: %s\nDate: %s\n",
-				v.Id, v.Name, v.Status, v.Date)
+			// Show the task if its not complete
+			if v.Status != "Complete" {
+				fmt.Printf("ID: %d\nName: %s\nStatus: %s\nDate: %s\n",
+					v.Id, v.Name, v.Status, v.Date)
+			}
 		}
 	}
 }
 
-// TODO: Implement this function
-func markAsDone(tasks *[]dbhandler.DbRow) {
-	var selectedTasks []string
-	var choices []huh.Option[string]
+// TODO: Look back at this function and try to understand what is going on
+// with the function passing here. Something with how slices are passed here
+// doesn't make sense in my mind.
+// TODO: Document this function...
+func markAsDone(tasks []dbhandler.DbRow) []dbhandler.DbRow {
+	var selectedTasks []*dbhandler.DbRow
+	var choices []huh.Option[*dbhandler.DbRow]
 
 	// Convert the tasks into huhNewOptions
-	for _, v := range *tasks {
-		convertedId := strconv.Itoa(v.Id)
-		choices = append(choices, huh.NewOption(v.Name, convertedId))
+	for i := range tasks {
+		choices = append(choices, huh.NewOption(tasks[i].Name, &tasks[i]))
 	}
-	if len(*tasks) == 0 {
+	if len(tasks) == 0 {
 		fmt.Println("There are no tasks on the list.")
+		return tasks
 	} else {
 		huh.NewForm(
 			huh.NewGroup(
-				huh.NewMultiSelect[string]().
+				huh.NewMultiSelect[*dbhandler.DbRow]().
 					Title("Task").
 					Options(choices...).
 					Value(&selectedTasks),
 			),
 		).Run()
 	}
+	for _, v := range selectedTasks {
+		v.Status = "Complete"
+	}
+	return tasks
 }
 
 // showMenu displays a menu with options from 1-5, returns int from user input.

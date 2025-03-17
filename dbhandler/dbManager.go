@@ -15,16 +15,42 @@ type DbRow struct {
 	Date   string
 }
 
-func InserIntoDb() {
-	fmt.Println("Inserted into database")
-}
+// UpdateDatabase updates the database with the tasks list collected from the
+// taskManager. All the values that have an id of 0 will be inserted into the
+// database as these did not exists previously, all the rest of the rows will
+// update the status row. After this we carry out a query which removes all
+// rows that has the updated status.
+func UpdateDatabase(filePath string, tasks *[]DbRow) {
 
-func UpdateDb() {
-	fmt.Println("Updated Database Entry")
-}
+	db, openDbErr := sql.Open("sqlite3", filePath)
 
-func DeleteFromDb() {
-	fmt.Println("Deleted from database.")
+	if openDbErr != nil {
+		fmt.Println(openDbErr)
+	}
+	// for loop to update all the task information
+	for _, v := range *tasks {
+		// if the id is 0 we know its a new entry otherwise we just update the row
+		if v.Id == 0 {
+			_, insertErr := db.Exec(`INSERT INTO todolist(task_name, task_status, task_date)
+            VALUES(?, ?, ?);`, v.Name, v.Status, v.Date)
+			if insertErr != nil {
+				fmt.Println(insertErr)
+			}
+		} else {
+			// If an entry has been moved to complete we need to change this.
+			_, updateErr := db.Exec(`UPDATE todolist SET task_status = ?
+            WHERE number_id = ?;`, v.Name, v.Status, v.Date, v.Id)
+			if updateErr != nil {
+				fmt.Println(updateErr)
+			}
+		}
+	}
+	// Finally removes all the tasks that have been completed
+	_, deleteErr := db.Exec(
+		`DELETE FROM todolist WHERE task_status = 'Complete';`)
+	if deleteErr != nil {
+		fmt.Println(deleteErr)
+	}
 }
 
 // CreateSchema takes a file path for the database and creates the required
