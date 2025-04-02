@@ -34,14 +34,14 @@ func UpdateDatabase(filePath string, tasks *[]DbRow) {
 			_, insertErr := db.Exec(`INSERT INTO todolist(task_name, task_status, task_date)
             VALUES(?, ?, ?);`, v.Name, v.Status, v.Date)
 			if insertErr != nil {
-				fmt.Println(insertErr)
+				fmt.Println("Error:", insertErr)
 			}
 		} else {
 			// If an entry has been moved to complete we need to change this.
 			_, updateErr := db.Exec(`UPDATE todolist SET task_status = ?
             WHERE number_id = ?;`, v.Status, v.Id)
 			if updateErr != nil {
-				fmt.Println(updateErr)
+				fmt.Println("Error:", updateErr)
 			}
 		}
 	}
@@ -49,8 +49,9 @@ func UpdateDatabase(filePath string, tasks *[]DbRow) {
 	_, deleteErr := db.Exec(
 		`DELETE FROM todolist WHERE task_status = 'Complete';`)
 	if deleteErr != nil {
-		fmt.Println(deleteErr)
+		fmt.Println("Error:", deleteErr)
 	}
+	db.Close()
 }
 
 // CreateSchema takes a file path for the database and creates the required
@@ -60,14 +61,14 @@ func CreateSchema(filePath string) {
 	if openDbErr != nil {
 		fmt.Println(openDbErr)
 	}
-	_, err := db.Exec(`CREATE TABLE TodoList(
+	_, creationErr := db.Exec(`CREATE TABLE TodoList(
     number_id INTEGER PRIMARY KEY,
     task_name TEXT NOT NULL, 
     task_status TEXT NOT NULL, 
     task_date TEXT NOT NULL);`)
 
-	if err != nil {
-		log.Fatal(err)
+	if creationErr != nil {
+		fmt.Println("Error:", creationErr)
 	}
 	defer db.Close()
 	fmt.Println("Created schema")

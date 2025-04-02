@@ -2,10 +2,11 @@ package taskhandler
 
 import (
 	"fmt"
-	"github.com/charmbracelet/huh"
 	"os"
 	"time"
 	"todoList/dbhandler"
+
+	"github.com/charmbracelet/huh"
 )
 
 const timeFormat = "2006-01-02"
@@ -43,7 +44,8 @@ func TodoListRunner(filePath string) {
 	}
 }
 
-func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
+// addTaskToList
+func addTaskToList(dbOutputCache *[]dbhandler.DbRow) {
 	var rowToAdd dbhandler.DbRow
 
 	// For loop for adding task to list
@@ -79,7 +81,6 @@ func addTaskToList(dbOutputCache *[]dbhandler.DbRow) *[]dbhandler.DbRow {
 		}
 
 	}
-	return dbOutputCache
 }
 
 // getInputDate allows user to pick an input date from menu, returns a date string

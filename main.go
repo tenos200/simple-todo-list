@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"todoList/dbhandler"
 	"todoList/taskhandler"
+	"todoList/tui"
+
+	tea "github.com/charmbracelet/bubbletea"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const filePath = "./test.db"
@@ -20,10 +23,21 @@ func main() {
 		createDbFile()
 		dbhandler.CreateSchema(filePath)
 	}
+
 	// If it already exist, ensure to close.
 	defer file.Close()
+
 	// Start the task
-	taskhandler.TodoListRunner(filePath)
+	if false {
+		taskhandler.TodoListRunner(filePath)
+	} else {
+		dbOutputCache := dbhandler.GetDbRows(filePath)
+		p := tea.NewProgram(tui.InitialModel(dbOutputCache),
+			tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Theres been an error %v", err)
+		}
+	}
 	os.Exit(0)
 }
 
